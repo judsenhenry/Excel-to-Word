@@ -1,0 +1,5 @@
+streamlit
+xlwings
+python-docx
+pdf2image
+Pillow
