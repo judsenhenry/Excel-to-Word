@@ -21,37 +21,41 @@ poppler_path = os.path.join(script_dir, "poppler", "Library", "bin")
 # Brug Poppler-stien i pdf2image
 from pdf2image import convert_from_path
 
+# Funktion til at vælge Excel-fil og vise ark
 def select_excel_file():
     file_path = st.file_uploader("Vælg Excel-fil", type=["xlsx", "xlsm"])
     if file_path:
         st.session_state['excel_file'] = file_path  # Gem filen i session_state
         load_sheets(file_path)
 
+# Funktion til at indlæse ark (faner) fra den valgte Excel-fil
 def load_sheets(file_path):
     try:
         with xw.App(visible=False) as app:
             wb = app.books.open(file_path)
-            sheet_names = [sheet.name for sheet in wb.sheets if sheet.visible]
+            sheet_names = [sheet.name for sheet in wb.sheets if sheet.visible]  # Hent synlige ark
         
         # Vis arkene som checkbokse
         selected_sheets = st.multiselect("Vælg de ark, du vil bruge", sheet_names)
-
         st.session_state['selected_sheets'] = selected_sheets  # Gem de valgte ark i session_state
 
     except Exception as e:
         st.error(f"Kunne ikke indlæse ark: {e}")
         st.session_state['selected_sheets'] = []  # Sørg for, at session_state får en tom liste
 
+# Funktion til at vælge Word-fil
 def select_word_file():
     word_file = st.file_uploader("Vælg Word-fil", type=["docx"])
     if word_file:
         st.session_state['word_file'] = word_file  # Gem filen i session_state
 
+# Funktion til at vælge output-mappe
 def select_image_output_folder():
     output_folder = st.text_input("Vælg mappe til output")
     if output_folder:
         st.session_state['output_folder'] = output_folder  # Gem output-mappe i session_state
 
+# Funktion til at generere et unikt filnavn
 def generate_unique_filename(base_path):
     counter = 1
     file_path = f"{base_path}_opdateret.docx"
@@ -60,6 +64,7 @@ def generate_unique_filename(base_path):
         counter += 1
     return file_path
 
+# Funktion til at beskære billeder
 def crop_image(image_path):
     try:
         img = Image.open(image_path)
@@ -77,6 +82,7 @@ def crop_image(image_path):
     except Exception as e:
         st.error(f"Beskæring fejlede for {os.path.basename(image_path)}:\n{e}")
 
+# Funktion til at gemme Excel-faner som PNG-billeder
 def save_excel_sheets_as_png():
     excel_file = st.session_state.get('excel_file')
     output_folder = st.session_state.get('output_folder')
@@ -116,6 +122,7 @@ def save_excel_sheets_as_png():
     except Exception as e:
         st.error(f"Kunne ikke åbne Excel: {e}")
 
+# Funktion til at indsætte billeder i Word-dokument
 def insert_images_into_word():
     word_file = st.session_state.get('word_file')
     output_folder = st.session_state.get('output_folder')
@@ -157,11 +164,13 @@ def insert_images_into_word():
     doc.save(output_file)
     st.success(f"Dokument gemt som {output_file}")
 
+# Start funktion
 def start_process():
     save_excel_sheets_as_png()
     insert_images_into_word()
     st.success("Processen er fuldført!")  # Viser beskeden først
 
+# Hovedapp
 st.title("Excel til Word Automation")
 
 # Upload filer og vælg mapper
