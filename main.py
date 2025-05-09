@@ -21,35 +21,36 @@ poppler_path = os.path.join(script_dir, "poppler", "Library", "bin")
 # Brug Poppler-stien i pdf2image
 from pdf2image import convert_from_path
 
-
 def select_excel_file():
     file_path = st.file_uploader("Vælg Excel-fil", type=["xlsx", "xlsm"])
     if file_path:
+        st.session_state['excel_file'] = file_path  # Gem filen i session_state
         load_sheets(file_path)
-
 
 def load_sheets(file_path):
     try:
         with xw.App(visible=False) as app:
             wb = app.books.open(file_path)
             sheet_names = [sheet.name for sheet in wb.sheets if sheet.visible]
-
+        
         # Vis arkene som checkbokse
         selected_sheets = st.multiselect("Vælg de ark, du vil bruge", sheet_names)
 
-        return selected_sheets
+        st.session_state['selected_sheets'] = selected_sheets  # Gem de valgte ark i session_state
+
     except Exception as e:
         st.error(f"Kunne ikke indlæse ark: {e}")
-        return []
-
+        st.session_state['selected_sheets'] = []  # Sørg for, at session_state får en tom liste
 
 def select_word_file():
-    return st.file_uploader("Vælg Word-fil", type=["docx"])
-
+    word_file = st.file_uploader("Vælg Word-fil", type=["docx"])
+    if word_file:
+        st.session_state['word_file'] = word_file  # Gem filen i session_state
 
 def select_image_output_folder():
-    return st.text_input("Vælg mappe til output")
-
+    output_folder = st.text_input("Vælg mappe til output")
+    if output_folder:
+        st.session_state['output_folder'] = output_folder  # Gem output-mappe i session_state
 
 def generate_unique_filename(base_path):
     counter = 1
@@ -58,7 +59,6 @@ def generate_unique_filename(base_path):
         file_path = f"{base_path}_opdateret_{counter}.docx"
         counter += 1
     return file_path
-
 
 def crop_image(image_path):
     try:
@@ -77,16 +77,15 @@ def crop_image(image_path):
     except Exception as e:
         st.error(f"Beskæring fejlede for {os.path.basename(image_path)}:\n{e}")
 
-
 def save_excel_sheets_as_png():
     excel_file = st.session_state.get('excel_file')
     output_folder = st.session_state.get('output_folder')
     selected_sheets = st.session_state.get('selected_sheets')
-
+    
     if not excel_file or not selected_sheets or not output_folder:
         st.warning("Vælg Excel-fil, ark og billedoutput-mappe!")
         return
-
+    
     try:
         with xw.App(visible=False) as app:
             wb = app.books.open(os.path.abspath(excel_file))
@@ -117,31 +116,30 @@ def save_excel_sheets_as_png():
     except Exception as e:
         st.error(f"Kunne ikke åbne Excel: {e}")
 
-
 def insert_images_into_word():
     word_file = st.session_state.get('word_file')
     output_folder = st.session_state.get('output_folder')
-
+    
     if not word_file or not output_folder:
         st.warning("Vælg Word-fil og billedoutput-mappe!")
         return
-
+    
     base_name, _ = os.path.splitext(word_file)
     output_file = generate_unique_filename(base_name)
-
+    
     doc = Document(word_file)
     image_dict = {}
     pattern = re.compile(r"(.+?)_(\d+)\.png", re.IGNORECASE)
-
+    
     for file in os.listdir(output_folder):
         match = pattern.match(file)
         if match:
             placeholder, index = match.groups()
             image_dict.setdefault(placeholder, []).append((int(index), file))
-
+    
     for key in image_dict:
         image_dict[key].sort()
-
+    
     for para in doc.paragraphs:
         for placeholder in list(image_dict.keys()):
             if f"{{{placeholder}}}" in para.text:
@@ -155,22 +153,20 @@ def insert_images_into_word():
                         para.add_run().add_picture(image_path, width=Cm(15), height=None)
                         if i < len(image_dict[placeholder]) - 1:
                             para.add_run().add_break(WD_BREAK.PAGE)
-
+    
     doc.save(output_file)
     st.success(f"Dokument gemt som {output_file}")
-
 
 def start_process():
     save_excel_sheets_as_png()
     insert_images_into_word()
     st.success("Processen er fuldført!")  # Viser beskeden først
 
-
 st.title("Excel til Word Automation")
 
 # Upload filer og vælg mapper
 select_excel_file()
-selected_sheets = load_sheets(st.session_state.get('excel_file'))  # Load selected sheets
+selected_sheets = st.session_state.get('selected_sheets', [])
 select_word_file()
 select_image_output_folder()
 
